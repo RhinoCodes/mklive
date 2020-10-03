@@ -29,7 +29,7 @@
 trap 'error_out $? $LINENO' INT TERM 0
 umask 022
 
-readonly REQUIRED_PKGS="base-files libgcc dash coreutils sed tar gawk syslinux grub-i386-efi grub-x86_64-efi squashfs-tools xorriso"
+readonly REQUIRED_PKGS="base-files libgcc dash coreutils sed tar gawk syslinux grub-i386-efi grub-x86_64-efi squashfs-tools xorriso rsync"
 readonly INITRAMFS_PKGS="binutils xz device-mapper dhclient dracut-network openresolv"
 readonly PROGNAME=$(basename "$0")
 
@@ -137,7 +137,7 @@ install_packages() {
         sed -e "s/\#\(${LOCALE}.*\)/\1/g" -i "$ROOTFS"/etc/default/libc-locales
     fi
     chroot "$ROOTFS" env -i xbps-reconfigure -a
-
+    rsync -av "$ROOTFS/root/" "$ROOTFS/endsystem/etc/skel"
     if [ -x installer.sh ]; then
         install -Dm755 installer.sh "$ROOTFS"/usr/sbin/void-installer
     else
@@ -392,7 +392,7 @@ if [ "$?" -ne "0" ]; then
     die "Failed to find kernel package version"
 fi
 
-: ${OUTPUT_FILE="void-live-${BASE_ARCH}-${KERNELVERSION}-$(date +%Y%m%d).iso"}
+: ${OUTPUT_FILE="$(cat ../name)-live-${BASE_ARCH}-${KERNELVERSION}-$(date +%Y%m%d).iso"}
 
 print_step "Installing software to generate the image: ${REQUIRED_PKGS} ..."
 install_prereqs
@@ -426,6 +426,7 @@ generate_squashfs
 
 print_step "Generating ISO image..."
 generate_iso_image
+
 
 hsize=$(du -sh "$OUTPUT_FILE"|awk '{print $1}')
 info_msg "Created $(readlink -f "$OUTPUT_FILE") ($hsize) successfully."
